@@ -7,12 +7,24 @@ import json
 from urllib.request import urlopen, urlretrieve
 import requests
 import tarfile
+from configparser import ConfigParser
+
 
 version = 0.2
 protonge_url = 'https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/'
-protondir = '~/.steam/root/compatibilitytools.d'
-install_directory = os.path.expanduser(protondir)
+configdir = os.path.expanduser('~/.config/proton-ge-updater')
+install_directory = '~/.steam/root/compatibilitytools.d'
 interactive = True
+
+
+def readconfig():
+    global install_directory
+    config = ConfigParser()
+    config.read(configdir + "./config.ini")
+    if(config.has_option("protonge-updater", "installdir")):
+        install_directory = os.path.expanduser(config["protonge-updater"]["installdir"])
+    else:
+        install_directory = os.path.expanduser(install_directory)
 
 
 def help():
@@ -21,6 +33,7 @@ def help():
           "\n[tag]    : Install a specific version",
           "\n-l, list : List installed Proton versions",
           "\n-y, yes  : Disable prompts and progress",
+          "\b-d, dir  : Set installation directory",
           "\n-h, help : Show this help")
 
 
@@ -134,14 +147,33 @@ def main(argv):
             elif(argv[1] in ['-l', '-list']):
                 list_versions()
 
+            elif(argv[1] in ['-d', '-list']):
+                if(argc > 2):
+                    # Add custom directory to configuration file
+                    config = ConfigParser()
+                    config.read(configdir + "/config.ini")
+                    if(not config.has_section('protonge-updater')):
+                        config.add_section('protonge-updater')
+                    config['protonge-updater']['installdir'] = argv[2]
+
+                    if(not os.path.exists(configdir)):
+                        os.mkdir(configdir)
+                        config['protonge-updater']['installdir'] = argv[2]
+
+                    with open(configdir + "/config.ini", 'w') as output:
+                        config.write(output)
+
             else:
+                readconfig()
                 if(argc > 2):
                     if(argv[2] in ['-y', '-yes']):
                         interactive = False
                 install(argv[1])
 
         else:
+            readconfig()
             install()
+
     except KeyboardInterrupt:
         print("\nExiting ...")
 
