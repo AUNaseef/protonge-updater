@@ -10,7 +10,7 @@ import tarfile
 from configparser import ConfigParser
 
 
-version = 0.3
+version = 0.4
 protonge_url = 'https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/'
 configdir = os.path.expanduser('~/.config/protonup')
 install_directory = '~/.steam/root/compatibilitytools.d'
@@ -18,6 +18,7 @@ interactive = True
 
 s_path = os.path.abspath(__file__)
 s_installpath = "/usr/bin/protonup"
+s_dlink = "https://github.com/AUNaseef/protonge-updater/raw/main/protonup.py"
 
 
 def readconfig():
@@ -32,14 +33,17 @@ def readconfig():
 
 
 def help():
-    print(f"ProtonUp {version} : Commands",
+    print(f"ProtonUp {version} (GPLv3)",
+          "\nURL: https://github.com/AUNaseef/protonup\n",
+          "\nBasic Commands",
           "\n[none]   : Update to the latest version",
           "\n[tag]    : Install a specific version",
           "\n-l, list : List installed Proton versions",
           "\n-d, dir  : Set installation directory",
           "\n-y, yes  : Disable prompts and progress",
-          "\n-h, help : Show this help",
-          "\n--install, --uninstall")
+          "\n-h, help : Show this help\n",
+          "\nMeta Commands:",
+          "\n--install, --uninstall, --update")
 
 
 def list_versions():
@@ -146,7 +150,7 @@ def main(argv):
                 else:
                     install()
 
-            elif(argv[1] in ['-h', '-help']):
+            elif(argv[1] in ['-h', '-help', '--help']):
                 help()
 
             elif(argv[1] in ['-l', '-list']):
@@ -195,6 +199,22 @@ def main(argv):
                     print("Uninstall successful")
                     exit()
                 print("Uninstall failed")
+                exit()
+
+            elif(argv[1] in ['--update']):
+                # Updating
+                urlretrieve(s_dlink, filename="/tmp/protonup")
+                if(s_path == s_installpath):
+                    # When installed
+                    if(not os.system(f"sudo chmod +x /tmp/protonup && sudo rm '{s_path}' && sudo cp /tmp/protonup '{s_path}'")):
+                        print("Update successful")
+                        exit()
+                elif(not os.system(f"chmod +x /tmp/protonup && rm '{s_path}' && cp /tmp/protonup '{s_path}'")):
+                    # Portable
+                    print("Update successful")
+                    exit()
+
+                print("Update failed")
                 exit()
 
             else:
