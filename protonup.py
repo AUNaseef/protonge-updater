@@ -65,16 +65,69 @@ def list_versions():
 
     print(f"Found {found} Proton installation{'s' if found != 1 else ''}")
     sys.stdout.write(output)
+          
+          
+def download(version="latest", just_download=False, interactive=True):
+    """Download a specific version of Proton GE"""
+    if version == "latest":
+          url = protonge_url + "latest"
+    else:
+          url = protonge_url + "tags/" + version
+    if just_download is True:
+        download_location = os.getcwd() + "/" + download_link.split('/')[-1]
+    else:
+        download_location = '/tmp/' + download_link.split('/')[-1]
+    
+    # Load information about the release from github api
+    try:
+        data = json.load(urlopen(url))
+    except OSError:
+        print("Failed to retrieve data",
+              "\nNetwork error or invalid release tag")
+        exit()
+
+    download_version = data['tag_name']
+    download_link = data['assets'][0]['browser_download_url']
+    
+    if interactive is True:
+        download = requests.get(download_link, stream=True)
+        size = int(download.headers.get('content-length'))
+        size_mb = round(size / 1048576, 2)
+        chunk_count = size / 32768
+
+        print("Ready to install Proton " + download_version)
+        print("Size      : ", size_mb, "MB")
+        print("Published : ", data['published_at'].split('T')[0])
+
+        if not input("Continue? (y/n) : ") in ['y', 'Y']:
+            print("Installation Cancelled")
+            exit()
+
+        with open(download_location, 'wb') as f:
+            x = 1
+            for chunk in download.iter_content(chunk_size=32768):
+                progress = round((x / chunk_count) * 100, 2)
+                downloaded = round((x * 32768) / 1048576, 2)
+                sys.stdout.write(f"\rDownloaded {progress}% - {downloaded} MB/{size_mb}MB")
+                x += 1
+                if chunk:
+                    f.write(chunk)
+                    f.flush()
+            print()
+    else:
+        print("Downloading", download_version, "...")
+        urlretrieve(download_link, filename=download_location)
 
 
-def install(version='latest'):
+def install(version='latest', interactive=True):
+    """Download and install a specific version of Proton"""
     if version == 'latest':
         print("Cheking for updates ...")
         url = protonge_url + 'latest'
     else:
         if os.path.exists(install_directory + "/Proton-" + version):
             print("Proton " + version + " is already installed")
-            if(input("Delete and re-install? (y/n) : ") in ['y', 'Y']):
+            if input("Delete and re-install? (y/n) : ") in ['y', 'Y']:
                 os.rmdir(install_directory + "/Proton-" + version)
             else:
                 exit()
@@ -97,39 +150,7 @@ def install(version='latest'):
         print("Proton " + download_version + " is already installed")
 
     else:
-        # Download and store the file temporarily in /tmp
-        download_location = '/tmp/' + download_link.split('/')[-1]
-
-        # Show download progress when not running in silent mode
-        if (interactive):
-            download = requests.get(download_link, stream=True)
-            size = int(download.headers.get('content-length'))
-            size_mb = round(size / 1048576, 2)
-            chunk_count = size / 32768
-
-            print("Ready to install Proton " + download_version)
-            print("Size      : ", size_mb, "MB")
-            print("Published : ", data['published_at'].split('T')[0])
-
-            if(not input("Continue? (y/n) : ") in ['y', 'Y']):
-                print("Installation Cancelled")
-                exit()
-
-            with open(download_location, 'wb') as f:
-                x = 1
-                for chunk in download.iter_content(chunk_size=32768):
-                    progress = round((x / chunk_count) * 100, 2)
-                    downloaded = round((x * 32768) / 1048576, 2)
-                    sys.stdout.write(f"\rDownloaded {progress}% - {downloaded} MB/{size_mb}MB")
-                    x += 1
-                    if chunk:
-                        f.write(chunk)
-                        f.flush()
-                print()
-        else:
-            print("Downloading", download_version, "...")
-            urlretrieve(download_link, filename=download_location)
-
+        download(version=version)
         # Extract the download file into installation directory
         print("Installing ...")
         tarfile.open(download_location, "r:gz").extractall(install_directory)
@@ -142,31 +163,31 @@ def main(argv):
     argc = len(argv)
 
     try:
-        if(argc > 1):
-            if(argv[1] in ['-y', '-yes']):
+        if argc > 1:
+            if argv[1] in ['-y', '-yes']:
                 interactive = False
                 if(argc > 2):
                     install(argv[2])
                 else:
                     install()
 
-            elif(argv[1] in ['-h', '-help', '--help']):
+            elif argv[1] in ['-h', '-help', '--help']:
                 help()
 
-            elif(argv[1] in ['-l', '-list']):
+            elif argv[1] in ['-l', '-list']:
                 list_versions()
 
-            elif(argv[1] in ['-d', '-dir']):
-                if(argc > 2):
+            elif argv[1] in ['-d', '-dir']:
+                if argc > 2:
                     # Add custom directory to configuration file
                     print(f"changing install directory to {argv[2]}")
                     config = ConfigParser()
                     config.read(configdir + "/config.ini")
-                    if(not config.has_section('protonge-updater')):
+                    if not config.has_section('protonge-updater'):
                         config.add_section('protonge-updater')
                     config['protonge-updater']['installdir'] = argv[2]
 
-                    if(not os.path.exists(configdir)):
+                    if not os.path.exists(configdir):
                         os.mkdir(configdir)
                         config['protonge-updater']['installdir'] = argv[2]
 
@@ -177,9 +198,9 @@ def main(argv):
                     print(f"current install directory: {install_directory}",
                            "\nUse -d [custom directory] to change")
 
-            elif(argv[1] in ['--install']):
+            elif argv[1] in ['--install']:
                 # Installing to bin
-                if(s_path == s_installpath):
+                if s_path == s_installpath:
                     print("Already installed")
                     exit()
                 elif(not os.system(f"sudo cp '{s_path}' {s_installpath}")):
@@ -190,7 +211,7 @@ def main(argv):
                 print("Install failed")
                 exit()
 
-            elif(argv[1] in ['--uninstall']):
+            elif argv[1] in ['--uninstall']:
                 # Uninstalling
                 if(not s_path == s_installpath):
                     print("Not installed")
@@ -201,7 +222,7 @@ def main(argv):
                 print("Uninstall failed")
                 exit()
 
-            elif(argv[1] in ['--update']):
+            elif argv[1] in ['--update']:
                 # Updating
                 urlretrieve(s_dlink, filename="/tmp/protonup")
                 if(s_path == s_installpath):
@@ -216,13 +237,19 @@ def main(argv):
 
                 print("Update failed")
                 exit()
+            elif argv[1] in ["--download"]:
+                if argc > 3:
+                    download(version=argv[2], just_download=True)
+                else:
+                    download(just_download=True)
 
             else:
                 readconfig()
                 if(argc > 2):
                     if(argv[2] in ['-y', '-yes']):
-                        interactive = False
-                install(argv[1])
+                        install(argv[1], interactive=False)
+                    else:
+                        install(argv[1])
 
         else:
             readconfig()
