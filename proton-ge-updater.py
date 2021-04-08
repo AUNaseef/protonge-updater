@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# ProtonGE Downloader and Updater
+# ProtonUp - ProtonGE Downloader and Updater
 # Authored by: Naseef Abdullah <aunaseef AT protonmail.com>
 import sys
 import os
@@ -10,32 +10,36 @@ import tarfile
 from configparser import ConfigParser
 
 
-version = 0.2
+version = 0.3
 protonge_url = 'https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/'
-configdir = os.path.expanduser('~/.config/proton-ge-updater')
+configdir = os.path.expanduser('~/.config/protonup')
 install_directory = '~/.steam/root/compatibilitytools.d'
 interactive = True
+
+s_path = os.path.abspath(__file__)
+s_installpath = "/usr/bin/protonup"
 
 
 def readconfig():
     global install_directory
     config = ConfigParser()
     config.read(configdir + "/config.ini")
-    if(config.has_option("protonge-updater", "installdir")):
-        install_directory = os.path.expanduser(config["protonge-updater"]["installdir"])
+    if(config.has_option("protonup", "installdir")):
+        install_directory = os.path.expanduser(config["protonup"]["installdir"])
         print(f"Custom Location: {install_directory}")
     else:
         install_directory = os.path.expanduser(install_directory)
 
 
 def help():
-    print(f"Proton GE Updater {version} : Commands",
+    print(f"ProtonUp {version} : Commands",
           "\n[none]   : Update to the latest version",
           "\n[tag]    : Install a specific version",
           "\n-l, list : List installed Proton versions",
           "\n-d, dir  : Set installation directory",
           "\n-y, yes  : Disable prompts and progress",
-          "\n-h, help : Show this help")
+          "\n-h, help : Show this help",
+          "\n--install, --uninstall")
 
 
 def list_versions():
@@ -151,6 +155,7 @@ def main(argv):
             elif(argv[1] in ['-d', '-dir']):
                 if(argc > 2):
                     # Add custom directory to configuration file
+                    print(f"changing install directory to {argv[2]}")
                     config = ConfigParser()
                     config.read(configdir + "/config.ini")
                     if(not config.has_section('protonge-updater')):
@@ -163,6 +168,34 @@ def main(argv):
 
                     with open(configdir + "/config.ini", 'w') as output:
                         config.write(output)
+                else:
+                    readconfig()
+                    print(f"current install directory: {install_directory}",
+                           "\nUse -d [custom directory] to change")
+
+            elif(argv[1] in ['--install']):
+                # Installing to bin
+                if(s_path == s_installpath):
+                    print("Already installed")
+                    exit()
+                elif(not os.system(f"sudo cp '{s_path}' {s_installpath}")):
+                    print("Install successful",
+                          "\nCommand: protonup")
+                    exit()
+                print()
+                print("Install failed")
+                exit()
+
+            elif(argv[1] in ['--uninstall']):
+                # Uninstalling
+                if(not s_path == s_installpath):
+                    print("Not installed")
+                    exit()
+                elif(not os.system(f"sudo rm '{s_path}'")):
+                    print("Uninstall successful")
+                    exit()
+                print("Uninstall failed")
+                exit()
 
             else:
                 readconfig()
