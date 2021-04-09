@@ -229,7 +229,7 @@ def _main(argv):
                 if s_path == s_installpath:
                     print("Already installed")
                     sys.exit()
-                elif not os.system(f"sudo cp '{s_path}' {s_installpath}"):
+                elif not shutil.copytree(s_path, s_installpath):
                     print("Install successful",
                           "\nCommand: protonup")
                     sys.exit()
