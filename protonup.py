@@ -1,16 +1,31 @@
 #!/usr/bin/env python3
 # ProtonUp - ProtonGE Downloader and Updater
 # Authored by: Naseef Abdullah <aunaseef AT protonmail.com>
+"""Update/Install/Uninstall Proton GE Versions"""
 import sys
 import os
 import json
 from urllib.request import urlopen, urlretrieve
-import requests
 import tarfile
 from configparser import ConfigParser
+import shutil
+import requests
 
 
 version = 0.4
+HELP = """ProtonUp {version} (GPLv3)
+URL: https://github.com/AUNaseef/protonup
+Basic Commands
+[none]   : Update to the latest version
+[tag]    : Install a specific version
+-l, list : List installed Proton versions
+-d, dir  : Set installation directory
+-y, yes  : Disable prompts and progress
+-h, help : Show this help
+
+Meta Commands:
+--install, --uninstall, --update"""
+
 protonge_url = 'https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/'
 configdir = os.path.expanduser('~/.config/protonup')
 install_directory = '~/.steam/root/compatibilitytools.d'
@@ -22,92 +37,91 @@ s_dlink = "https://github.com/AUNaseef/protonge-updater/raw/main/protonup.py"
 
 
 def readconfig():
-    global install_directory
+    """Read current config"""
     config = ConfigParser()
     config.read(configdir + "/config.ini")
-    if(config.has_option("protonup", "installdir")):
+    if config.has_option("protonup", "installdir"):
         install_directory = os.path.expanduser(config["protonup"]["installdir"])
         print(f"Custom Location: {install_directory}")
     else:
         install_directory = os.path.expanduser(install_directory)
 
 
-def help():
-    print(f"ProtonUp {version} (GPLv3)",
-          "\nURL: https://github.com/AUNaseef/protonup\n",
-          "\nBasic Commands",
-          "\n[none]   : Update to the latest version",
-          "\n[tag]    : Install a specific version",
-          "\n-l, list : List installed Proton versions",
-          "\n-d, dir  : Set installation directory",
-          "\n-y, yes  : Disable prompts and progress",
-          "\n-h, help : Show this help\n",
-          "\nMeta Commands:",
-          "\n--install, --uninstall, --update")
-
-
 def list_versions():
-    # Get the list of folders in install directory
+    """Get the list of folders in install directory"""
     try:
         installed_versions = os.listdir(install_directory)
     except OSError:
         print("Error: Failed to find proton installations")
-        exit()
+        sys.exit()
 
     found = 0
     output = ""
 
     # List names of directories with proton
     for i in installed_versions:
-        if(os.path.exists(f"{install_directory}/{i}/proton")):
+        if os.path.exists(f"{install_directory}/{i}/proton"):
             found += 1
             output += i + '\n'
 
     print(f"Found {found} Proton installation{'s' if found != 1 else ''}")
     sys.stdout.write(output)
-          
-          
+
+
+def uninstall_proton(version):
+    """Uninstall given Proton version"""
+    installed_versions = os.listdir(install_directory)
+    for each in enumerate(installed_versions):
+        installed_versions[each[0]] = installed_versions[each[0]][7:]
+    if version not in installed_versions:
+        print("Not a valid version")
+    else:
+        shutil.rmtree(install_directory + "/Proton-" + version)
+        print("Uninstall successful")
+
+
 def download(version="latest", just_download=False, interactive=True):
     """Download a specific version of Proton GE"""
     if version == "latest":
-          url = protonge_url + "latest"
+        url = protonge_url + "latest"
     else:
-          url = protonge_url + "tags/" + version
-    if just_download is True:
-        download_location = os.getcwd() + "/" + download_link.split('/')[-1]
-    else:
-        download_location = '/tmp/' + download_link.split('/')[-1]
-    
+        url = protonge_url + "tags/" + version
+
     # Load information about the release from github api
     try:
         data = json.load(urlopen(url))
     except OSError:
         print("Failed to retrieve data",
               "\nNetwork error or invalid release tag")
-        exit()
+        sys.exit()
 
     download_version = data['tag_name']
     download_link = data['assets'][0]['browser_download_url']
-    
+
+    if just_download is True:
+        download_location = os.getcwd() + "/" + download_link.split('/')[-1]
+    else:
+        download_location = '/tmp/' + download_link.split('/')[-1]
+
     if interactive is True:
         download = requests.get(download_link, stream=True)
         size = int(download.headers.get('content-length'))
         size_mb = round(size / 1048576, 2)
         chunk_count = size / 32768
 
-        print("Ready to install Proton " + download_version)
+        print("Ready to download Proton " + download_version)
         print("Size      : ", size_mb, "MB")
         print("Published : ", data['published_at'].split('T')[0])
 
         if not input("Continue? (y/n) : ") in ['y', 'Y']:
-            print("Installation Cancelled")
-            exit()
+            print("Download Cancelled")
+            return False
 
         with open(download_location, 'wb') as f:
             x = 1
             for chunk in download.iter_content(chunk_size=32768):
-                progress = round((x / chunk_count) * 100, 2)
-                downloaded = round((x * 32768) / 1048576, 2)
+                progress = int(round((x / chunk_count) * 100, 2))
+                downloaded = int(round((x * 32768) / 1048576, 2))
                 sys.stdout.write(f"\rDownloaded {progress}% - {downloaded} MB/{size_mb}MB")
                 x += 1
                 if chunk:
@@ -117,12 +131,13 @@ def download(version="latest", just_download=False, interactive=True):
     else:
         print("Downloading", download_version, "...")
         urlretrieve(download_link, filename=download_location)
+    return download_location
 
 
 def install(version='latest', interactive=True):
     """Download and install a specific version of Proton"""
     if version == 'latest':
-        print("Cheking for updates ...")
+        print("Checking for updates ...")
         url = protonge_url + 'latest'
     else:
         if os.path.exists(install_directory + "/Proton-" + version):
@@ -130,7 +145,7 @@ def install(version='latest', interactive=True):
             if input("Delete and re-install? (y/n) : ") in ['y', 'Y']:
                 os.rmdir(install_directory + "/Proton-" + version)
             else:
-                exit()
+                sys.exit()
         print("Preparing to install ...")
         url = protonge_url + "tags/" + version
 
@@ -140,7 +155,7 @@ def install(version='latest', interactive=True):
     except OSError:
         print("Failed to retrieve data",
               "\nNetwork error or invalid release tag")
-        exit()
+        sys.exit()
 
     download_version = data['tag_name']
     download_link = data['assets'][0]['browser_download_url']
@@ -150,7 +165,9 @@ def install(version='latest', interactive=True):
         print("Proton " + download_version + " is already installed")
 
     else:
-        download(version=version)
+        download_location = download(version=version)
+        if download_location is False:
+            print("Installation Canceled")
         # Extract the download file into installation directory
         print("Installing ...")
         tarfile.open(download_location, "r:gz").extractall(install_directory)
@@ -158,23 +175,33 @@ def install(version='latest', interactive=True):
         print("Successfully installed")
 
 
-def main(argv):
-    global interactive
-    argc = len(argv)
+def _post_install_cleanup():
+    """Post install cleanup"""
+    try:
+        os.chmod("/tmp/protonup", 0o776)
+        os.remove(s_path)
+        shutil.copytree("/tmp/protonup", s_path)
+    except (FileNotFoundError, PermissionError):
+        return False
+    return True
 
+
+def _main(argv):
+    """Main function"""
+    readconfig()
+    argc = len(argv)
     try:
         if argc > 1:
             if argv[1] in ['-y', '-yes']:
-                interactive = False
-                if(argc > 2):
-                    install(argv[2])
+                if argc > 2:
+                    install(argv[2], interactive=False)
                 else:
-                    install()
+                    install(interactive=False)
 
             elif argv[1] in ['-h', '-help', '--help']:
-                help()
+                print(HELP)
 
-            elif argv[1] in ['-l', '-list']:
+            elif argv[1] in ['-l', '-list', "--list"]:
                 list_versions()
 
             elif argv[1] in ['-d', '-dir']:
@@ -194,65 +221,66 @@ def main(argv):
                     with open(configdir + "/config.ini", 'w') as output:
                         config.write(output)
                 else:
-                    readconfig()
                     print(f"current install directory: {install_directory}",
-                           "\nUse -d [custom directory] to change")
+                          "\nUse -d [custom directory] to change")
 
             elif argv[1] in ['--install']:
                 # Installing to bin
                 if s_path == s_installpath:
                     print("Already installed")
-                    exit()
-                elif(not os.system(f"sudo cp '{s_path}' {s_installpath}")):
+                    sys.exit()
+                elif not os.system(f"sudo cp '{s_path}' {s_installpath}"):
                     print("Install successful",
                           "\nCommand: protonup")
-                    exit()
+                    sys.exit()
                 print()
                 print("Install failed")
-                exit()
+                sys.exit()
 
             elif argv[1] in ['--uninstall']:
                 # Uninstalling
-                if(not s_path == s_installpath):
+                if s_path != s_installpath:
                     print("Not installed")
-                    exit()
-                elif(not os.system(f"sudo rm '{s_path}'")):
+                    sys.exit()
+                elif not os.remove(s_path):
                     print("Uninstall successful")
-                    exit()
+                    sys.exit()
                 print("Uninstall failed")
-                exit()
+                sys.exit()
 
             elif argv[1] in ['--update']:
                 # Updating
                 urlretrieve(s_dlink, filename="/tmp/protonup")
-                if(s_path == s_installpath):
+                if s_path == s_installpath:
                     # When installed
-                    if(not os.system(f"sudo chmod +x /tmp/protonup && sudo rm '{s_path}' && sudo cp /tmp/protonup '{s_path}'")):
+                    if _post_install_cleanup():
                         print("Update successful")
-                        exit()
-                elif(not os.system(f"chmod +x /tmp/protonup && rm '{s_path}' && cp /tmp/protonup '{s_path}'")):
+                        sys.exit()
+                elif _post_install_cleanup():
                     # Portable
                     print("Update successful")
-                    exit()
+                    sys.exit()
 
                 print("Update failed")
-                exit()
+                sys.exit()
             elif argv[1] in ["--download"]:
-                if argc > 3:
+                if argc >= 3:
                     download(version=argv[2], just_download=True)
                 else:
                     download(just_download=True)
-
+            elif argv[1] in ["-r", "--remove"]:
+                if argc > 2:
+                    uninstall_proton(argv[2])
+                else:
+                    print("No version provided.")
             else:
-                readconfig()
-                if(argc > 2):
-                    if(argv[2] in ['-y', '-yes']):
-                        install(argv[1], interactive=False)
-                    else:
-                        install(argv[1])
+                if argc > 2:
+                    if argv[2] in ['-y', '-yes']:
+                        install(version=argv[1], interactive=False)
+                else:
+                    install(version=argv[1])
 
         else:
-            readconfig()
             install()
 
     except KeyboardInterrupt:
@@ -260,4 +288,4 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    main(sys.argv)
+    _main(sys.argv)
