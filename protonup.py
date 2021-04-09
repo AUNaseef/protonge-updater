@@ -210,13 +210,13 @@ def _main(argv):
                     print(f"changing install directory to {argv[2]}")
                     config = ConfigParser()
                     config.read(configdir + "/config.ini")
-                    if not config.has_section('protonge-updater'):
-                        config.add_section('protonge-updater')
-                    config['protonge-updater']['installdir'] = argv[2]
+                    if not config.has_section('protonup'):
+                        config.add_section('protonup')
+                    config['protonup']['installdir'] = argv[2]
 
                     if not os.path.exists(configdir):
                         os.mkdir(configdir)
-                        config['protonge-updater']['installdir'] = argv[2]
+                        config['protonup']['installdir'] = argv[2]
 
                     with open(configdir + "/config.ini", 'w') as output:
                         config.write(output)
