@@ -42,30 +42,40 @@ def readconfig(install_directory):
     config.read(configdir + "/config.ini")
     if config.has_option("protonup", "installdir"):
         install_directory = os.path.expanduser(config["protonup"]["installdir"])
-        print(f"Custom Location: {install_directory}")
     else:
         install_directory = os.path.expanduser(install_directory)
+    return install_directory
 
 
 def list_versions():
+    """get list of installated versions of Proton"""
     """Get the list of folders in install directory"""
+    installdir = readconfig(install_directory)
     try:
-        installed_versions = os.listdir(install_directory)
+        installed_versions = os.listdir(installdir)
     except OSError:
         print("Error: Failed to find proton installations")
-        sys.exit()
+        return []
 
-    found = 0
-    output = ""
+    output = []
 
     # List names of directories with proton
     for i in installed_versions:
-        if os.path.exists(f"{install_directory}/{i}/proton"):
-            found += 1
-            output += i + '\n'
+        if os.path.exists(installdir + "/" + i + "/proton"):
+            output.append(i)
+    return output
 
-    print(f"Found {found} Proton installation{'s' if found != 1 else ''}")
-    sys.stdout.write(output)
+
+def _print_versions():
+    versions = list_versions()
+    print("Found %s Proton installation" % len(versions), end="")
+    if len(versions) != 1:
+        print("s", end="")
+    print()
+    if versions == []:
+        sys.exit()
+    for each in versions:
+        print(each)
 
 
 def uninstall_proton(version):
@@ -86,7 +96,6 @@ def download(version="latest", just_download=False, interactive=True):
         url = protonge_url + "latest"
     else:
         url = protonge_url + "tags/" + version
-
     # Load information about the release from github api
     try:
         data = json.load(urlopen(url))
@@ -202,7 +211,7 @@ def _main(argv):
                 print(HELP)
 
             elif argv[1] in ['-l', '-list', "--list"]:
-                list_versions()
+                _print_versions()
 
             elif argv[1] in ['-d', '-dir']:
                 if argc > 2:
