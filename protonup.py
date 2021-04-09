@@ -36,7 +36,7 @@ s_installpath = "/usr/bin/protonup"
 s_dlink = "https://github.com/AUNaseef/protonge-updater/raw/main/protonup.py"
 
 
-def readconfig():
+def readconfig(install_directory):
     """Read current config"""
     config = ConfigParser()
     config.read(configdir + "/config.ini")
@@ -188,7 +188,7 @@ def _post_install_cleanup():
 
 def _main(argv):
     """Main function"""
-    readconfig()
+    readconfig(install_directory)
     argc = len(argv)
     try:
         if argc > 1:
