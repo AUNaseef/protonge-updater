@@ -113,9 +113,37 @@ class Main(Gtk.Window):
         uninst_button.connect("clicked", self.uninst_confirm)
         self.grid.attach(uninst_button, 5, 3, 1, 1)
 
+        up_button = Gtk.Button.new_with_label("Update")
+        up_button.connect("clicked", self.up_conf)
+        self.grid.attach(up_button, 0, 5, 10, 1)
 
         # display window changes
         self.show_all()
+
+    def up_conf(self, button):
+        """Confirm Update"""
+        self.clear_window()
+
+        label = Gtk.Label()
+        label.set_markup("Are you sure you want to update Proton to the latest release?")
+        label.set_justify(Gtk.Justification.CENTER)
+        label = self._set_default_margins(label)
+        self.grid.attach(label, 0, 0, 3, 1)
+
+        yes = Gtk.Button.new_with_label("Update")
+        yes.connect("clicked", self.update)
+        self.grid.attach(yes, 0, 2, 1, 1)
+
+        no = Gtk.Button.new_with_label("Cancel")
+        no.connect("clicked", self.main_menu)
+        self.grid.attach(no, 2, 2, 1, 1)
+
+        self.show_all()
+
+    def update(self, button):
+        """Update Proton to the latest release"""
+        self.selected_tag = "latest"
+        self.install("clicked")
 
     def select_tag(self, widget):
         """select a tag to uninstall/install"""
@@ -129,7 +157,7 @@ class Main(Gtk.Window):
         label.set_markup("Are you sure you want to Install Proton %s?" % (self.selected_tag))
         label.set_justify(Gtk.Justification.CENTER)
         label = self._set_default_margins(label)
-        self.grid.attach(label, 0, 0, 1, 3)
+        self.grid.attach(label, 0, 0, 3, 1)
 
         yes = Gtk.Button.new_with_label("Install")
         yes.connect("clicked", self.install)
