@@ -42,41 +42,52 @@ def readconfig(install_directory):
     config.read(configdir + "/config.ini")
     if config.has_option("protonup", "installdir"):
         install_directory = os.path.expanduser(config["protonup"]["installdir"])
-        print(f"Custom Location: {install_directory}")
     else:
         install_directory = os.path.expanduser(install_directory)
+    return install_directory
 
 
 def list_versions():
+    """get list of installated versions of Proton"""
     """Get the list of folders in install directory"""
+    installdir = readconfig(install_directory)
     try:
-        installed_versions = os.listdir(install_directory)
+        installed_versions = os.listdir(installdir)
     except OSError:
         print("Error: Failed to find proton installations")
-        sys.exit()
+        return []
 
-    found = 0
-    output = ""
+    output = []
 
     # List names of directories with proton
     for i in installed_versions:
-        if os.path.exists(f"{install_directory}/{i}/proton"):
-            found += 1
-            output += i + '\n'
+        if os.path.exists(installdir + "/" + i + "/proton"):
+            output.append(i)
+    return output
 
-    print(f"Found {found} Proton installation{'s' if found != 1 else ''}")
-    sys.stdout.write(output)
+
+def _print_versions():
+    versions = list_versions()
+    print("Found %s Proton installation" % len(versions), end="")
+    if len(versions) != 1:
+        print("s", end="")
+    print()
+    if versions == []:
+        sys.exit()
+    for each in versions:
+        print(each)
 
 
 def uninstall_proton(version):
     """Uninstall given Proton version"""
-    installed_versions = os.listdir(install_directory)
+    installdir = readconfig(install_directory)
+    installed_versions = os.listdir(installdir)
     for each in enumerate(installed_versions):
         installed_versions[each[0]] = installed_versions[each[0]][7:]
     if version not in installed_versions:
         print("Not a valid version")
     else:
-        shutil.rmtree(install_directory + "/Proton-" + version)
+        shutil.rmtree(installdir + "/Proton-" + version)
         print("Uninstall successful")
 
 
@@ -86,7 +97,6 @@ def download(version="latest", just_download=False, interactive=True):
         url = protonge_url + "latest"
     else:
         url = protonge_url + "tags/" + version
-
     # Load information about the release from github api
     try:
         data = json.load(urlopen(url))
@@ -96,7 +106,10 @@ def download(version="latest", just_download=False, interactive=True):
         sys.exit()
 
     download_version = data['tag_name']
-    download_link = data['assets'][0]['browser_download_url']
+    if len(data['assets']) != 1:
+        download_link = data['assets'][1]['browser_download_url']
+    else:
+        download_link = data['assets'][0]['browser_download_url']
 
     if just_download is True:
         download_location = os.getcwd() + "/" + download_link.split('/')[-1]
@@ -136,14 +149,15 @@ def download(version="latest", just_download=False, interactive=True):
 
 def install(version='latest', interactive=True):
     """Download and install a specific version of Proton"""
+    installdir = readconfig(install_directory)
     if version == 'latest':
         print("Checking for updates ...")
         url = protonge_url + 'latest'
     else:
-        if os.path.exists(install_directory + "/Proton-" + version):
+        if os.path.exists(installdir + "/Proton-" + version):
             print("Proton " + version + " is already installed")
             if input("Delete and re-install? (y/n) : ") in ['y', 'Y']:
-                os.rmdir(install_directory + "/Proton-" + version)
+                os.rmdir(installdir + "/Proton-" + version)
             else:
                 sys.exit()
         print("Preparing to install ...")
@@ -158,19 +172,22 @@ def install(version='latest', interactive=True):
         sys.exit()
 
     download_version = data['tag_name']
-    download_link = data['assets'][0]['browser_download_url']
+    if len(data['assets']) != 1:
+        download_link = data['assets'][1]['browser_download_url']
+    else:
+        download_link = data['assets'][0]['browser_download_url']
 
     # Check if this version already exists
-    if os.path.exists(install_directory + "/Proton-" + download_version):
+    if os.path.exists(installdir + "/Proton-" + download_version):
         print("Proton " + download_version + " is already installed")
 
     else:
-        download_location = download(version=version)
+        download_location = download(version=version, interactive=interactive)
         if download_location is False:
             print("Installation Canceled")
         # Extract the download file into installation directory
         print("Installing ...")
-        tarfile.open(download_location, "r:gz").extractall(install_directory)
+        tarfile.open(download_location, "r:gz").extractall(installdir)
         os.remove(download_location)
         print("Successfully installed")
 
@@ -202,7 +219,7 @@ def _main(argv):
                 print(HELP)
 
             elif argv[1] in ['-l', '-list', "--list"]:
-                list_versions()
+                _print_versions()
 
             elif argv[1] in ['-d', '-dir']:
                 if argc > 2:
@@ -210,13 +227,13 @@ def _main(argv):
                     print(f"changing install directory to {argv[2]}")
                     config = ConfigParser()
                     config.read(configdir + "/config.ini")
-                    if not config.has_section('protonge-updater'):
-                        config.add_section('protonge-updater')
-                    config['protonge-updater']['installdir'] = argv[2]
+                    if not config.has_section('protonup'):
+                        config.add_section('protonup')
+                    config['protonup']['installdir'] = argv[2]
 
                     if not os.path.exists(configdir):
                         os.mkdir(configdir)
-                        config['protonge-updater']['installdir'] = argv[2]
+                        config['protonup']['installdir'] = argv[2]
 
                     with open(configdir + "/config.ini", 'w') as output:
                         config.write(output)
