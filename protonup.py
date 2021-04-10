@@ -80,13 +80,14 @@ def _print_versions():
 
 def uninstall_proton(version):
     """Uninstall given Proton version"""
-    installed_versions = os.listdir(install_directory)
+    installdir = readconfig(install_directory)
+    installed_versions = os.listdir(installdir)
     for each in enumerate(installed_versions):
         installed_versions[each[0]] = installed_versions[each[0]][7:]
     if version not in installed_versions:
         print("Not a valid version")
     else:
-        shutil.rmtree(install_directory + "/Proton-" + version)
+        shutil.rmtree(installdir + "/Proton-" + version)
         print("Uninstall successful")
 
 
