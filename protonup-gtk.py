@@ -57,13 +57,14 @@ class Main(Gtk.Window):
         pro_inst = protonup.list_versions()
         new_pro_inst = pro_inst[0]
         count = 1
-        for each in pro_inst:
-            if count < 4:
-                count += 1
-                new_pro_inst = new_pro_inst + "\t\t" + each
-            else:
-                count = 1
-                new_pro_inst = new_pro_inst + "\n" + each
+        if len(pro_inst) > 1:
+            for each in pro_inst[1:]:
+                if count < 4:
+                    count += 1
+                    new_pro_inst = new_pro_inst + "\t\t" + each
+                else:
+                    count = 1
+                    new_pro_inst = new_pro_inst + "\n" + each
 
         # make window
         self.clear_window()
