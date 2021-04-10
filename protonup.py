@@ -145,14 +145,15 @@ def download(version="latest", just_download=False, interactive=True):
 
 def install(version='latest', interactive=True):
     """Download and install a specific version of Proton"""
+    installdir = readconfig(install_directory)
     if version == 'latest':
         print("Checking for updates ...")
         url = protonge_url + 'latest'
     else:
-        if os.path.exists(install_directory + "/Proton-" + version):
+        if os.path.exists(installdir + "/Proton-" + version):
             print("Proton " + version + " is already installed")
             if input("Delete and re-install? (y/n) : ") in ['y', 'Y']:
-                os.rmdir(install_directory + "/Proton-" + version)
+                os.rmdir(installdir + "/Proton-" + version)
             else:
                 sys.exit()
         print("Preparing to install ...")
@@ -170,7 +171,7 @@ def install(version='latest', interactive=True):
     download_link = data['assets'][0]['browser_download_url']
 
     # Check if this version already exists
-    if os.path.exists(install_directory + "/Proton-" + download_version):
+    if os.path.exists(installdir + "/Proton-" + download_version):
         print("Proton " + download_version + " is already installed")
 
     else:
@@ -179,7 +180,7 @@ def install(version='latest', interactive=True):
             print("Installation Canceled")
         # Extract the download file into installation directory
         print("Installing ...")
-        tarfile.open(download_location, "r:gz").extractall(install_directory)
+        tarfile.open(download_location, "r:gz").extractall(installdir)
         os.remove(download_location)
         print("Successfully installed")
 
