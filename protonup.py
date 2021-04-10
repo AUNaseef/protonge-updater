@@ -169,7 +169,10 @@ def install(version='latest', interactive=True):
         sys.exit()
 
     download_version = data['tag_name']
-    download_link = data['assets'][0]['browser_download_url']
+    if len(data['assets']) != 1:
+        download_link = data['assets'][1]['browser_download_url']
+    else:
+        download_link = data['assets'][0]['browser_download_url']
 
     # Check if this version already exists
     if os.path.exists(installdir + "/Proton-" + download_version):
