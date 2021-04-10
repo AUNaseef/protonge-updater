@@ -106,7 +106,10 @@ def download(version="latest", just_download=False, interactive=True):
         sys.exit()
 
     download_version = data['tag_name']
-    download_link = data['assets'][0]['browser_download_url']
+    if len(data['assets']) != 1:
+        download_link = data['assets'][1]['browser_download_url']
+    else:
+        download_link = data['assets'][0]['browser_download_url']
 
     if just_download is True:
         download_location = os.getcwd() + "/" + download_link.split('/')[-1]
@@ -179,7 +182,7 @@ def install(version='latest', interactive=True):
         print("Proton " + download_version + " is already installed")
 
     else:
-        download_location = download(version=version)
+        download_location = download(version=version, interactive=interactive)
         if download_location is False:
             print("Installation Canceled")
         # Extract the download file into installation directory
