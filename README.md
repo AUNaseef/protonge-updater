@@ -1,5 +1,5 @@
 # ProtonUp
-Install and Update [GloriusEggroll Proton](https://github.com/GloriousEggroll/proton-ge-custom) with a Single Command
+Install and Update [GloriousEggroll Proton](https://github.com/GloriousEggroll/proton-ge-custom) with a Single Command
 
 # Installation
 Open a terminal window and enter the following commands:
